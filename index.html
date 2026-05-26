@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Derivo Club Clone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        .glass-panel { background: rgba(17, 20, 37, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .radial-progress {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: conic-gradient(#10b981 var(--progress, 74%), #1e293b 0%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .radial-progress::before {
+            content: '';
+            position: absolute;
+            width: 122px;
+            height: 122px;
+            border-radius: 50%;
+            background: #090b14;
+        }
+    </style>
+</head>
+<body class="bg-[#090b14] text-gray-100 font-sans antialiased min-h-screen custom-scrollbar">
+
+    <header class="glass-panel px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-r from-blue-600 to-cyan-500 text-transparent bg-clip-text text-2xl font-black tracking-tighter">DERIVO.CLONE</div>
+            <span class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">V2.0 Pro</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <input type="password" id="api-token" placeholder="Enter Deriv API Account Token..." 
+                   class="bg-[#131729] border border-gray-800 rounded-xl px-4 py-2 text-xs font-mono text-emerald-300 focus:outline-none focus:border-blue-500 w-56">
+            <button onclick="connectAccount()" id="auth-btn" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all">
+                Connect Account
+            </button>
+            <div class="bg-[#131729] px-3 py-2 rounded-xl border border-gray-800 flex items-center gap-2 text-xs font-mono">
+                <span class="w-2 h-2 rounded-full bg-red-500" id="net-dot"></span>
+                <span class="text-gray-400" id="net-text">Disconnected</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="p-6 max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <section class="lg:col-span-4 space-y-6">
+            <div class="glass-panel rounded-2xl p-5 space-y-4 shadow-xl">
+                <div class="text-xs font-bold uppercase tracking-wider text-gray-400 border-b border-gray-800 pb-2">🕹️ Engine Configuration</div>
+                
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Asset Index</label>
+                    <select id="market-asset" class="w-full bg-[#131729] border border-gray-800 rounded-xl p-3 text-xs font-bold text-gray-300 focus:outline-none">
+                        <option value="R_10">Volatility 10 Index</option>
+                        <option value="R_50">Volatility 50 Index</option>
+                        <option value="R_100" selected>Volatility 100 Index</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase tracking-wider">Select Premium Strategy Bot</label>
+                    <select id="bot-strategy" onchange="syncBotUIState()" class="w-full bg-[#131729] border border-gray-800 rounded-xl p-3 text-xs font-black text-orange-400 focus:outline-none">
+                        <option value="flash_bot" selected>⚡ Flash Bot</option>
+                        <option value="seven_bot">🎯 Seven Bot</option>
+                        <option value="parity_bot">⚖️ Parity Bot</option>
+                        <option value="even_bot">🔢 Even Bot</option>
+                        <option value="odd_bot">🧬 Odd Bot</option>
+                        <option value="diffx_bot">🛡️ DiffX Bot</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">Stake (USD)</label>
+                        <input type="number" id="base-stake" value="1.00" class="w-full bg-[#131729] border border-gray-800 rounded-xl p-3 text-xs font-mono text-center text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">Martingale</label>
+                        <input type="number" id="martingale-factor" value="11.0" class="w-full bg-[#131729] border border-gray-800 rounded-xl p-3 text-xs font-mono text-center text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">Take Profit</label>
+                        <input type="number" id="take-profit" value="5.00" class="w-full bg-[#131729] border border-gray-800 rounded-xl p-3 text-xs font-mono text-center text-green-400">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 mb-1 uppercase">Stop Loss</label>
+                        <input type="number" id="stop-loss" value="20.00" class="w-full bg-[#131729] border border-gray-800 rounded-xl p-3 text-xs font-mono text-center text-red-400">
+                    </div>
+                </div>
+
+                <button id="execution-trigger-btn" disabled onclick="toggleBotExecution()" class="w-full bg-gray-800 text-gray-500 font-black text-xs py-4 rounded-xl uppercase border border-gray-700/50 cursor-not-allowed">
+                    Awaiting API Connection
+                </button>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-4 grid grid-cols-3 gap-2 text-center shadow-lg">
+                <div class="bg-[#0c0f1d] p-2.5 rounded-xl border border-gray-800/60">
+                    <span class="text-[9px] uppercase font-bold text-gray-400 block">Net Balance</span>
+                    <span class="text-xs font-black font-mono text-white mt-1 block" id="net-profit">$0.00</span>
+                </div>
+                <div class="bg-[#0c0f1d] p-2.5 rounded-xl border border-gray-800/60">
+                    <span class="text-[9px] uppercase font-bold text-gray-400 block">Win / Loss</span>
+                    <span class="text-xs font-black font-mono text-gray-300 mt-1 block" id="win-loss-ratio">0W / 0L</span>
+                </div>
+                <div class="bg-[#0c0f1d] p-2.5 rounded-xl border border-gray-800/60">
+                    <span class="text-[9px] uppercase font-bold text-gray-400 block">Active Bet</span>
+                    <span class="text-xs font-black font-mono text-blue-400 mt-1 block" id="active-stake">$1.00</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-5 space-y-6">
+            <div class="glass-panel rounded-2xl p-6 shadow-2xl text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-blue-400 block mb-0.5" id="strategy-label">Matches Strategy Engine</span>
+                <div class="text-xs font-mono text-gray-400" id="current-bot-display">Active App Engine: Flash Bot</div>
+
+                <div class="bg-[#0c0f1d] border border-gray-800/80 rounded-2xl p-6 my-6 max-w-xs mx-auto flex flex-col items-center space-y-4 shadow-inner">
+                    <div class="text-5xl font-black font-mono text-emerald-400" id="predicted-digit-display">-</div>
+                    <div class="text-[10px] uppercase tracking-widest font-bold text-gray-400" id="prediction-type-text">Matches Prediction</div>
+                    
+                    <div class="radial-progress" id="confidence-ring" style="--progress: 74%;">
+                        <div class="z-10 text-center">
+                            <span class="text-2xl font-black font-mono text-white" id="confidence-text">74%</span>
+                            <span class="text-[9px] block uppercase text-gray-400 font-bold tracking-wide">Confidence</span>
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-[#121627] border border-gray-800/80 rounded-xl py-2 px-4 text-xs font-semibold text-orange-400" id="recommended-runs-box">
+                        🔄 Recommended Runs: 8
+                    </div>
+
+                    <button class="w-full bg-blue-950/40 border border-blue-800/50 text-blue-400 text-xs py-2 rounded-xl font-mono" id="countdown-btn">
+                        ⏱️ Automated Entry Standby
+                    </button>
+                </div>
+
+                <div class="bg-[#0c0f1d] border border-gray-800 rounded-xl p-3 max-w-sm mx-auto text-left flex gap-2.5 items-center">
+                    <span class="text-lg">📈</span>
+                    <div class="font-mono text-xs">
+                        <span class="text-gray-400">Live Spot:</span> <span id="live-spot-price" class="text-gray-200 font-bold">-</span>
+                        <span class="mx-2 text-gray-700">|</span>
+                        <span class="text-gray-400">Last Digit:</span> <span id="live-last-digit" class="text-yellow-400 font-bold">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-4 shadow-xl">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">🧾 Platform Status Logs</h4>
+                <div id="logs-terminal" class="space-y-2 h-24 overflow-y-auto custom-scrollbar pr-1 font-mono text-xs text-gray-400">
+                    <div class="text-gray-600 text-center py-6 italic">Connect token to initialization network feeds.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-3">
+            <div class="glass-panel rounded-2xl p-5 shadow-2xl h-full flex flex-col">
+                <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 border-b border-gray-800 pb-2 flex justify-between">
+                    <span>📊 Digit Density (100 Window)</span>
+                </div>
+                <div id="density-matrix-stack" class="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
+                    </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // STEP 1: CHANGE THIS CODE TO YOUR APP_ID IF YOU REGISTER ONE!
+        const MY_D_CLUB_APP_ID = "1089"; 
+        const MASTER_WS_API_URL = `wss://ws.derivws.com/websockets/v3?app_id=${MY_D_CLUB_APP_ID}`;
+        
+        let websocket = null;
+        let tickCacheArray = [];
+        let executionActive = false;
+        let currentDynamicStake = 1.00;
+        let coreBaseStake = 1.00;
+        let customMartingaleFactor = 11.0;
+        let transactionSettlementAwaitingFlag = false;
+        let cumulativeSessionBalance = 0.00;
+        let winsCounter = 0;
+        let lossesCounter = 0;
+        let targetPredictionValue = 0;
+
+        // UI DOM Access Pointers
+        const tokenInputField = document.getElementById('api-token');
+        const tokenAuthBtnElement = document.getElementById('auth-btn');
+        const netDotIndicator = document.getElementById('net-dot');
+        const netTextDisplayLabel = document.getElementById('net-text');
+        const assetSelectorNode = document.getElementById('market-asset');
+        const strategySelectorNode = document.getElementById('bot-strategy');
+        const executionTriggerBtnNode = document.getElementById('execution-trigger-btn');
+        
+        const strategyLabel = document.getElementById('strategy-label');
+        const currentBotDisplay = document.getElementById('current-bot-display');
+        const predictedDigitDisplayLabel = document.getElementById('predicted-digit-display');
+        const predictionTypeText = document.getElementById('prediction-type-text');
+        const confidenceRing = document.getElementById('confidence-ring');
+        const confidenceText = document.getElementById('confidence-text');
+        const liveSpotPriceLabel = document.getElementById('live-spot-price');
+        const liveLastDigitLabel = document.getElementById('live-last-digit');
+        const densityMatrixStackContainer = document.getElementById('density-matrix-stack');
+        const logsTerminalContainer = document.getElementById('logs-terminal');
+        const profitValueLabel = document.getElementById('net-profit');
+        const winLossRatioLabel = document.getElementById('win-loss-ratio');
+        const activeStakeValueLabel = document.getElementById('active-stake');
+
+        function mountWebSocketChannel() {
+            if (websocket) websocket.close();
+            websocket = new WebSocket(MASTER_WS_API_URL);
+
+            websocket.onopen = () => {
+                netDotIndicator.className = "w-2 h-2 rounded-full bg-orange-500 animate-pulse";
+                netTextDisplayLabel.textContent = "Connecting...";
+                websocket.send(JSON.stringify({ ticks: assetSelectorNode.value }));
+            };
+
+            websocket.onmessage = (event) => {
+                const incomingDataPayload = JSON.parse(event.data);
+
+                if (incomingDataPayload.tick) {
+                    const priceString = incomingDataPayload.tick.quote.toFixed(incomingDataPayload.tick.pip_size);
+                    const terminalIsolatedDigit = parseInt(priceString.slice(-1));
+                    liveSpotPriceLabel.textContent = priceString;
+                    liveLastDigitLabel.textContent = terminalIsolatedDigit;
+                    ingestMarketStreamTick(terminalIsolatedDigit);
+                }
+
+                if (incomingDataPayload.msg_type === 'authorize') {
+                    if (incomingDataPayload.error) {
+                        alert("API Connection Error: " + incomingDataPayload.error.message);
+                        rollbackVerificationState();
+                    } else {
+                        document.getElementById('unlock-banner').textContent = "Premium Mode Fully Active";
+                        tokenInputField.disabled = true;
+                        tokenAuthBtnElement.textContent = "Authorized";
+                        tokenAuthBtnElement.className = "bg-emerald-600/30 border border-emerald-500 text-emerald-400 font-bold text-xs px-5 py-2.5 rounded-xl cursor-not-allowed";
+                        netDotIndicator.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                        netTextDisplayLabel.textContent = "Live Account";
+                        executionTriggerBtnNode.disabled = false;
+                        executionTriggerBtnNode.className = "w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs py-4 rounded-xl uppercase transition-all cursor-pointer";
+                        executionTriggerBtnNode.textContent = "▶️ Start Bot Engine";
+                        printTerminalLog("Connected to secure API exchange nodes.", "text-emerald-400");
+                    }
+                }
+
+                if (incomingDataPayload.msg_type === 'buy') {
+                    if (incomingDataPayload.error) {
+                        printTerminalLog("❌ Blocked: " + incomingDataPayload.error.message, "text-red-400");
+                        transactionSettlementAwaitingFlag = false;
+                    } else {
+                        printTerminalLog(`📥 Order Processed: ${incomingDataPayload.buy.contract_id}`, "text-blue-400");
+                    }
+                }
+
+                if (incomingDataPayload.msg_type === 'proposal_open_contract' && incomingDataPayload.proposal_open_contract) {
+                    const contract = incomingDataPayload.proposal_open_contract;
+                    if (contract.is_expired) evaluateSettledContractResolution(contract);
+                }
+            };
+        }
+
+        function connectAccount() {
+            const clearToken = tokenInputField.value.trim();
+            if (!clearToken) return alert("Please supply an API token code entry first.");
+            websocket.send(JSON.stringify({ authorize: clearToken }));
+        }
+
+        function rollbackVerificationState() {
+            executionActive = false;
+            executionTriggerBtnNode.disabled = true;
+            executionTriggerBtnNode.className = "w-full bg-gray-800 text-gray-500 font-black text-xs py-4 rounded-xl cursor-not-allowed";
+            executionTriggerBtnNode.textContent = "Awaiting API Connection";
+        }
+
+        function syncBotUIState() {
+            const selectedBot = strategySelectorNode.value;
+            const factorBox = document.getElementById('martingale-factor');
+            
+            if (selectedBot === 'flash_bot') {
+                strategyLabel.textContent = "Matches Strategy Engine";
+                currentBotDisplay.textContent = "Active App Engine: Flash Bot";
+                predictionTypeText.textContent = "Matches Prediction";
+                factorBox.value = "11.0"; 
+            } else if (selectedBot === 'seven_bot') {
+                strategyLabel.textContent = "Target 8/9 Boundary Engine";
+                currentBotDisplay.textContent = "Active App Engine: Seven Bot";
+                predictionTypeText.textContent = "High Digit Split Barrier";
+                factorBox.value = "2.5";
+            } else if (selectedBot === 'parity_bot') {
+                strategyLabel.textContent = "Parity Imbalance Grid";
+                currentBotDisplay.textContent = "Active App Engine: Parity Bot";
+                predictionTypeText.textContent = "Even/Odd Equilibrium Matrix";
+                factorBox.value = "2.0";
+            } else {
+                strategyLabel.textContent = "Digit Strategy Assistant";
+                currentBotDisplay.textContent = `Active App Engine: ${strategySelectorNode.options[strategySelectorNode.selectedIndex].text}`;
+                predictionTypeText.textContent = "Standard Probability System";
+                factorBox.value = "2.0";
+            }
+        }
+
+        function ingestMarketStreamTick(targetDigitValue) {
+            tickCacheArray.push(targetDigitValue);
+            while (tickCacheArray.length > 100) { tickCacheArray.shift(); }
+
+            const clusterMatrix = Array(10).fill(0);
+            tickCacheArray.forEach(digit => clusterMatrix[digit]++);
+            renderStructuralDistributionGraph(clusterMatrix, tickCacheArray.length);
+
+            if (tickCacheArray.length >= 10) executeBotCalculations(clusterMatrix, tickCacheArray.length);
+        }
+
+        function executeBotCalculations(densityMatrix, totalSamples) {
+            let maxDigit = 0, maxCount = -1;
+            densityMatrix.forEach((val, key) => { if(val > maxCount) { maxCount = val; maxDigit = key; } });
+            
+            let mockConfidence = Math.min(Math.round((maxCount / totalSamples) * 650), 98);
+            if(mockConfidence < 45) mockConfidence = 52;
+
+            predictedDigitDisplayLabel.textContent = maxDigit;
+            confidenceText.textContent = `${mockConfidence}%`;
+            confidenceRing.style.setProperty('--progress', `${mockConfidence}%`);
+            targetPredictionValue = maxDigit;
+
+            // Automation Trigger Loop Check
+            if (executionAct
